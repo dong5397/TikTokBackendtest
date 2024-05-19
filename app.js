@@ -7,30 +7,39 @@ import { fileURLToPath } from "url";
 import fs from "fs";
 
 const { Pool } = pkg;
-/* Postgres cluster tiktokbackendtest2 created
-  Username:    postgres
-  Password:    hT01v9ylRVMeU3m
-  Hostname:    tiktokbackendtest2.internal
-  Flycast:     fdaa:5:35ca:0:1::4a
-  Proxy port:  5432
-  Postgres port:  5433
-  Connection string: postgres://postgres:hT01v9ylRVMeU3m@tiktokbackendtest2.flycast:5432*/
+
+// PostgreSQL Connection Pool 설정
 const pool = new Pool({
   user: "postgres",
-  password: "hT01v9ylRVMeU3m",
-  host: "tiktokbackendtest2",
+  password: "1wRuKVsTzKc6dqH",
+  host: "tiktokbackendtest.flycast", // 수정된 호스트 이름
   database: "postgres",
   port: 5432,
 });
 
 const app = express();
-const corsOptions = {
-  origin: "*",
-};
 
-app.use(cors(corsOptions));
+// CORS 설정
+app.use(
+  cors({
+    origin: "*",
+    methods: ["POST"],
+    credentials: true,
+  })
+);
+
+// JSON 파싱 설정
 app.use(express.json());
-app.use(fileUpload());
+
+// 파일 업로드 설정
+app.use(
+  fileUpload({
+    limits: { fileSize: 10 * 1024 * 1024 }, // 파일 크기 10MB로 제한
+    abortOnLimit: true,
+  })
+);
+
+// 정적 파일 제공
 app.use(express.static("uploads"));
 
 // __dirname 대체 코드
@@ -53,7 +62,7 @@ const createQuestion = async (req, res) => {
       const file = req.files.file;
       const filePath = path.join(UPLOAD_DIR, file.name);
       await file.mv(filePath);
-      file_url = `/uploads/${file.name}`;
+      file_url = `${req.protocol}://${req.get("host")}/uploads/${file.name}`;
     }
 
     const query = `
@@ -87,6 +96,7 @@ const createQuestion = async (req, res) => {
   }
 };
 
+// POST 요청 경로
 app.post("/api/questions", createQuestion);
 
 // 서버 시작
