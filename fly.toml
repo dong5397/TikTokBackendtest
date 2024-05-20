@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for makterbackend on 2024-05-19T18:59:09+09:00
+# fly.toml app configuration file generated for tiktokbackendtest on 2024-05-20T21:07:42+09:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'makterbackend'
+app = 'tiktokbackendtest'
 primary_region = 'nrt'
 
 [build]
