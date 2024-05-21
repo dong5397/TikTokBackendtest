@@ -1,18 +1,31 @@
 import express from "express";
 import pkg from "pg";
 import cors from "cors";
-import fileUpload from "express-fileupload";
+import multer from "multer";
+
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 
 const { Pool } = pkg;
+/* 
+Postgres cluster tiktokar created
+  Username:    postgres
+  Password:    9DQnxnh37LBOCnE
+  Hostname:    tiktokar.internal
+  Flycast:     fdaa:5:35c8:0:1::21
+  Proxy port:  5432
+  Postgres port:  5433
+  Connection string: postgres://postgres:9DQnxnh37LBOCnE@tiktokar.flycast:5432
 
+Save your credentials in a secure place -- you won't be able to see them again!
+
+*/
 // PostgreSQL Connection Pool 설정
 const pool = new Pool({
   user: "postgres",
-  password: "d0c2i4G9khX1YRt",
-  host: "tiktokbackendtest2.flycast",
+  password: "9DQnxnh37LBOCnE",
+  host: "tiktokar.internal",
   database: "postgres",
   port: 5432,
 });
@@ -28,19 +41,10 @@ app.use(
   })
 );
 
-// 파일 업로드 설정
-app.use(
-  fileUpload({
-    limits: { fileSize: 500 * 1024 * 1024 }, // 최대 파일 크기 제한 (500 MB)
-    abortOnLimit: true, // 파일 크기 초과 시 요청 중단
-  })
-);
-
-// JSON 파싱 설정 - 파일 업로드 전에 미들웨어 순서에 유의
+// JSON 파싱 설정
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static("uploads"));
-app.use("/uploads", express.static(path.join("uploads")));
+
 // __dirname 대체 코드
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,17 +61,28 @@ if (!fs.existsSync(UPLOAD_DIR)) {
 // 정적 파일 제공 경로 설정
 app.use("/uploads", express.static(UPLOAD_DIR));
 
+// Multer 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, UPLOAD_DIR);
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
 // 문의 데이터 생성 API
 const createQuestion = async (req, res) => {
   try {
     const { inquirer_name, phone, email, title, content } = req.body;
     let file_url = null;
 
-    if (req.files && req.files.file) {
-      const file = req.files.file;
-      const filePath = path.join(UPLOAD_DIR, file.name);
-      await file.mv(filePath);
-      file_url = `${req.protocol}://${req.get("host")}/uploads/${file.name}`;
+    if (req.file) {
+      file_url = `${req.protocol}://${req.get("host")}/uploads/${
+        req.file.filename
+      }`;
     }
 
     const query = `
@@ -163,10 +178,14 @@ app.get("/api/files", (req, res) => {
 });
 
 // POST 요청 경로
-app.post("/api/questions", createQuestion);
+app.post("/api/questions", upload.single("file"), createQuestion);
 
 // GET 요청 경로
 app.get("/api/questions", getQuestions);
+
+app.get("/", (req, res) => {
+  res.send("Hello tiktok World!");
+});
 
 // 서버 시작
 const PORT = process.env.PORT || 3000;
